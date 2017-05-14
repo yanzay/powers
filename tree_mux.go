@@ -4,7 +4,7 @@ import "github.com/yanzay/tbot"
 
 type TreeMux struct{}
 
-func (tm *TreeMux) Mux(string) (*tbot.Handler, tbot.MessageVars) {
+func (tm *TreeMux) Mux(*tbot.Message) (*tbot.Handler, tbot.MessageVars) {
 	return &tbot.Handler{}, tbot.MessageVars{}
 }
 
