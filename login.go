@@ -50,6 +50,7 @@ func questionare(m *tbot.Message) {
 		}
 	}
 	m.Reply("Registered")
+	ReplyHome(m)
 }
 
 func checkAsking(profile Profile, m *tbot.Message) {

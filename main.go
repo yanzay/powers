@@ -32,13 +32,21 @@ func main() {
 		log.Fatal(err)
 	}
 	s.AddMiddleware(Login)
-	s.HandleFunc("/start", StartHandler)
+	s.HandleFunc(tbot.RouteRoot, HomeHandler)
+	s.HandleFunc("/market", MarketHandler)
+	s.SetAlias(tbot.RouteRoot, "Home")
+	s.SetAlias(tbot.RouteBack, "Back")
+	s.SetAlias("/market", "Market")
 	s.HandleDefault(DefaultHandler)
 	s.ListenAndServe()
 }
 
-func StartHandler(m *tbot.Message) {
-	m.Reply("Welcome to the Powers!")
+func HomeHandler(m *tbot.Message) {
+	ReplyHome(m)
+}
+
+func MarketHandler(m *tbot.Message) {
+	ReplyMarket(m)
 }
 
 func DefaultHandler(m *tbot.Message) {
