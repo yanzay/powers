@@ -1,7 +1,7 @@
 build:
 	go build -v -i .
 dev: build
-	./powers --local
+	./powers --local --log-level trace
 linuxbuild:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -i -v .
 docker: linuxbuild

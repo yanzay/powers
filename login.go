@@ -15,13 +15,15 @@ type Question struct {
 }
 
 var questions = []*Question{
-	{Key: "first_name", Prompt: "Enter your first name:"},
+	{Key: "first_name", Prompt: "Enter your first name:", ValidationRule: "^[A-Z][a-z]*$", ValidationComment: "Name should start with capital letter and contain only letters"},
 	{Key: "last_name", Prompt: "Enter your last name:"},
 	{Key: "18+", Prompt: "Are you 18+ years old?", Options: []string{"Yes", "No"}},
 }
 
 func Login(f tbot.HandlerFunction) tbot.HandlerFunction {
 	return func(m *tbot.Message) {
+		log.Tracef("middleware: start")
+		defer log.Tracef("middleware: stop")
 		log.Debugf("ChatID: %d", m.ChatID)
 		if registered(m.ChatID) {
 			f(m)
@@ -32,6 +34,8 @@ func Login(f tbot.HandlerFunction) tbot.HandlerFunction {
 }
 
 func questionare(m *tbot.Message) {
+	log.Tracef("questionare: start")
+	defer log.Tracef("questionare: stop")
 	profile := storage.GetProfile(m.ChatID)
 	checkAsking(profile, m)
 	for _, question := range questions {
@@ -49,6 +53,8 @@ func questionare(m *tbot.Message) {
 }
 
 func checkAsking(profile Profile, m *tbot.Message) {
+	log.Tracef("checkAsking: start")
+	defer log.Tracef("checkAsking: stop")
 	for _, question := range questions {
 		if question.asking {
 			profile[question.Key] = m.Text()
@@ -59,7 +65,10 @@ func checkAsking(profile Profile, m *tbot.Message) {
 }
 
 func registered(chatID int64) bool {
+	log.Tracef("registered: start")
+	defer log.Tracef("registered: stop")
 	profile := storage.GetProfile(chatID)
+	log.Debugf("Profile: %v", profile)
 	for _, question := range questions {
 		if profile[question.Key] == "" {
 			return false
