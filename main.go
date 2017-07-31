@@ -36,7 +36,7 @@ func main() {
 	s.HandleFunc("/market", MarketHandler)
 	s.SetAlias(tbot.RouteRoot, "Home")
 	s.SetAlias(tbot.RouteBack, "Back")
-	s.SetAlias("/market", "Market")
+	s.SetAlias("market", "Market")
 	s.HandleDefault(DefaultHandler)
 	s.ListenAndServe()
 }

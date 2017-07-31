@@ -1,6 +1,8 @@
 package main
 
 import (
+	"regexp"
+
 	"github.com/yanzay/log"
 	"github.com/yanzay/tbot"
 )
@@ -15,8 +17,8 @@ type Question struct {
 }
 
 var questions = []*Question{
-	{Key: "first_name", Prompt: "Enter your first name:", ValidationRule: "^[A-Z][a-z]*$", ValidationComment: "Name should start with capital letter and contain only letters"},
-	{Key: "last_name", Prompt: "Enter your last name:"},
+	{Key: "first_name", Prompt: "Enter your first name:", ValidationRule: "^[A-Z][a-z]*$", ValidationComment: "First name should start with capital letter and contain only letters"},
+	{Key: "last_name", Prompt: "Enter your last name:", ValidationRule: "^[A-Z][a-z]*$", ValidationComment: "Last name should start with capital letter and contain only letters"},
 	{Key: "18+", Prompt: "Are you 18+ years old?", Options: []string{"Yes", "No"}},
 }
 
@@ -58,6 +60,17 @@ func checkAsking(profile Profile, m *tbot.Message) {
 	defer log.Tracef("checkAsking: stop")
 	for _, question := range questions {
 		if question.asking {
+			if question.ValidationRule != "" {
+				match, err := regexp.MatchString(question.ValidationRule, m.Text())
+				if err != nil {
+					log.Errorf("error matching validation rule: %q", err)
+					return
+				}
+				if !match {
+					m.Reply(question.ValidationComment)
+					return
+				}
+			}
 			profile[question.Key] = m.Text()
 			question.asking = false
 			return
