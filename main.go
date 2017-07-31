@@ -32,23 +32,38 @@ func main() {
 		log.Fatal(err)
 	}
 	s.AddMiddleware(Login)
-	s.HandleFunc(tbot.RouteRoot, HomeHandler)
-	s.HandleFunc("/market", MarketHandler)
+	addHandlers(s)
+	addAliases(s)
+	err = s.ListenAndServe()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func addHandlers(s *tbot.Server) {
+	s.HandleFunc(tbot.RouteRoot, homeHandler)
+	s.HandleFunc("/market", marketHandler)
+	s.HandleFunc("/work", workHandler)
+	s.HandleDefault(defaultHandler)
+}
+
+func addAliases(s *tbot.Server) {
 	s.SetAlias(tbot.RouteRoot, "Home")
 	s.SetAlias(tbot.RouteBack, "Back")
 	s.SetAlias("market", "Market")
-	s.HandleDefault(DefaultHandler)
-	s.ListenAndServe()
 }
 
-func HomeHandler(m *tbot.Message) {
+func homeHandler(m *tbot.Message) {
 	ReplyHome(m)
 }
 
-func MarketHandler(m *tbot.Message) {
+func marketHandler(m *tbot.Message) {
 	ReplyMarket(m)
 }
 
-func DefaultHandler(m *tbot.Message) {
+func defaultHandler(m *tbot.Message) {
 	m.Reply("hm?")
+}
+
+func workHandler(m *tbot.Message) {
 }

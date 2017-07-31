@@ -17,9 +17,23 @@ type Question struct {
 }
 
 var questions = []*Question{
-	{Key: "first_name", Prompt: "Enter your first name:", ValidationRule: "^[A-Z][a-z]*$", ValidationComment: "First name should start with capital letter and contain only letters"},
-	{Key: "last_name", Prompt: "Enter your last name:", ValidationRule: "^[A-Z][a-z]*$", ValidationComment: "Last name should start with capital letter and contain only letters"},
-	{Key: "18+", Prompt: "Are you 18+ years old?", Options: []string{"Yes", "No"}},
+	{
+		Key:               "first_name",
+		Prompt:            "Enter your first name:",
+		ValidationRule:    "^[A-Z][a-z]*$",
+		ValidationComment: "First name should start with capital letter and contain only letters",
+	},
+	{
+		Key:               "last_name",
+		Prompt:            "Enter your last name:",
+		ValidationRule:    "^[A-Z][a-z]*$",
+		ValidationComment: "Last name should start with capital letter and contain only letters",
+	},
+	{
+		Key:     "18+",
+		Prompt:  "Are you 18+ years old?",
+		Options: []string{"Yes", "No"},
+	},
 }
 
 func Login(f tbot.HandlerFunction) tbot.HandlerFunction {

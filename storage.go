@@ -28,7 +28,6 @@ func NewStorage() *Storage {
 		homes:    make(map[int64]*Home),
 		market:   &Market{Total: 42},
 	}
-
 }
 
 func (s *Storage) GetProfile(id int64) Profile {
