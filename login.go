@@ -8,6 +8,7 @@ import (
 	"github.com/yanzay/tbot"
 )
 
+// Question is a generic question structure for surveys
 type Question struct {
 	Key               string
 	Prompt            string
@@ -52,36 +53,49 @@ var questions = map[string]*Question{
 
 func login(f tbot.HandlerFunction) tbot.HandlerFunction {
 	return func(m *tbot.Message) {
-		if registered(m.ChatID) {
+		profile, err := store.GetProfile(m.ChatID)
+		if err != nil {
+			log.Errorf("can't get player's profile: %q", err)
+			return
+		}
+		if profile.Blocked {
+			m.Reply("You're blocked. Have a nice life!")
+			return
+		}
+		if profile.IsFull() {
 			f(m)
 			return
 		}
-		survey(m)
+		survey(m, profile)
 	}
 }
 
-func survey(m *tbot.Message) {
-	profile, err := store.GetProfile(m.ChatID)
-	if err != nil {
-		log.Errorf("can't get player's profile: %q", err)
-		return
-	}
+func survey(m *tbot.Message, profile *models.Profile) {
 	survey, err := store.GetSurvey("login", m.ChatID)
 	if err != nil {
 		log.Errorf("can't get survey: %q", err)
 		return
 	}
+
+	// already asked a question
 	if survey.Asking != "" {
 		comment := setAnswer(profile, questions[survey.Asking], m.Text())
 		if comment != "" {
 			m.Reply(comment)
-			return
+		} else {
+			survey.Asking = ""
+			store.SetSurvey("login", m.ChatID, survey)
+			store.SetProfile(m.ChatID, profile)
 		}
-		survey.Asking = ""
-		store.SetSurvey("login", m.ChatID, survey)
-		store.SetProfile(m.ChatID, profile)
 	}
-	if !registered(m.ChatID) {
+
+	if profile.Blocked {
+		m.Reply("You're blocked. Have a nice life!")
+		return
+	}
+
+	// ask next question
+	if !profile.IsFull() {
 		survey.Asking = askNext(profile, m)
 		err = store.SetSurvey("login", m.ChatID, survey)
 		if err != nil {
@@ -90,7 +104,8 @@ func survey(m *tbot.Message) {
 		return
 	}
 
-	if registered(m.ChatID) {
+	// user registered, we're done here
+	if profile.IsFull() {
 		m.Reply("Registered")
 		replyHome(m)
 	}
@@ -131,16 +146,8 @@ func setAnswer(prof *models.Profile, question *Question, answer string) string {
 	case "last_name":
 		prof.LastName = answer
 	case "18+":
+		prof.Blocked = (answer == "No")
 		prof.Has18 = (answer == "Yes")
 	}
 	return ""
-}
-
-func registered(chatID int64) bool {
-	profile, err := store.GetProfile(chatID)
-	if err != nil {
-		log.Errorf("can't get player's profile: %q", err)
-		return false
-	}
-	return profile.IsFull()
 }
