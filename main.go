@@ -5,14 +5,16 @@ import (
 	"os"
 
 	"github.com/yanzay/log"
+	"github.com/yanzay/powers/storage"
 	"github.com/yanzay/tbot"
 )
 
 var (
-	local = flag.Bool("local", false, "Launch bot without webhook")
+	local  = flag.Bool("local", false, "Launch bot without webhook")
+	dbFile = flag.String("db", "powers.db", "Database file")
 )
 
-var storage = NewStorage()
+var store storage.Storage
 
 func main() {
 	flag.Parse()
@@ -31,9 +33,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	s.AddMiddleware(Login)
+	s.AddMiddleware(login)
 	addHandlers(s)
 	addAliases(s)
+	store = storage.New(*dbFile)
 	err = s.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
@@ -54,11 +57,11 @@ func addAliases(s *tbot.Server) {
 }
 
 func homeHandler(m *tbot.Message) {
-	ReplyHome(m)
+	replyHome(m)
 }
 
 func marketHandler(m *tbot.Message) {
-	ReplyMarket(m)
+	replyMarket(m)
 }
 
 func defaultHandler(m *tbot.Message) {

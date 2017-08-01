@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/yanzay/log"
+	"github.com/yanzay/powers/models"
 	"github.com/yanzay/tbot"
 )
 
@@ -13,30 +14,43 @@ type Question struct {
 	Options           []string
 	ValidationRule    string
 	ValidationComment string
-	asking            bool
 }
 
-var questions = []*Question{
-	{
+func (q *Question) isValidAnswer(answer string) (string, bool) {
+	if q.ValidationRule != "" {
+		match, err := regexp.MatchString(q.ValidationRule, answer)
+		if err != nil {
+			log.Errorf("error matching validation rule: %q", err)
+		}
+		if !match {
+			return q.ValidationComment, false
+		}
+	}
+	return "", true
+}
+
+var questions = map[string]*Question{
+	"first_name": {
 		Key:               "first_name",
 		Prompt:            "Enter your first name:",
 		ValidationRule:    "^[A-Z][a-z]*$",
 		ValidationComment: "First name should start with capital letter and contain only letters",
 	},
-	{
+	"last_name": {
 		Key:               "last_name",
 		Prompt:            "Enter your last name:",
 		ValidationRule:    "^[A-Z][a-z]*$",
 		ValidationComment: "Last name should start with capital letter and contain only letters",
 	},
-	{
-		Key:     "18+",
-		Prompt:  "Are you 18+ years old?",
-		Options: []string{"Yes", "No"},
+	"18+": {
+		Key:            "18+",
+		Prompt:         "Are you 18+ years old?",
+		ValidationRule: "Yes|No",
+		Options:        []string{"Yes", "No"},
 	},
 }
 
-func Login(f tbot.HandlerFunction) tbot.HandlerFunction {
+func login(f tbot.HandlerFunction) tbot.HandlerFunction {
 	return func(m *tbot.Message) {
 		log.Tracef("middleware: start")
 		defer log.Tracef("middleware: stop")
@@ -45,62 +59,97 @@ func Login(f tbot.HandlerFunction) tbot.HandlerFunction {
 			f(m)
 			return
 		}
-		questionare(m)
+		survey(m)
 	}
 }
 
-func questionare(m *tbot.Message) {
-	log.Tracef("questionare: start")
-	defer log.Tracef("questionare: stop")
-	profile := storage.GetProfile(m.ChatID)
-	checkAsking(profile, m)
-	for _, question := range questions {
-		if profile[question.Key] == "" {
-			question.asking = true
-			if question.Options != nil {
-				m.ReplyKeyboard(question.Prompt, [][]string{question.Options}, tbot.OneTimeKeyboard)
-			} else {
-				m.Reply(question.Prompt)
-			}
+func survey(m *tbot.Message) {
+	log.Tracef("survey: start")
+	defer log.Tracef("survey: stop")
+	profile, err := store.GetProfile(m.ChatID)
+	if err != nil {
+		log.Errorf("can't get player's profile: %q", err)
+		return
+	}
+	survey, err := store.GetSurvey("login", m.ChatID)
+	if err != nil {
+		log.Errorf("can't get survey: %q", err)
+		return
+	}
+	if survey.Asking != "" {
+		comment := setAnswer(profile, questions[survey.Asking], m.Text())
+		if comment != "" {
+			m.Reply(comment)
 			return
 		}
+		survey.Asking = ""
+		store.SetSurvey("login", m.ChatID, survey)
+		store.SetProfile(m.ChatID, profile)
 	}
-	m.Reply("Registered")
-	ReplyHome(m)
+	if !registered(m.ChatID) {
+		survey.Asking = askNext(profile, m)
+		log.Tracef("saving survey %v", survey)
+		err = store.SetSurvey("login", m.ChatID, survey)
+		if err != nil {
+			log.Errorf("can't save survey %s: %q", "login", err)
+		}
+		return
+	}
+
+	if registered(m.ChatID) {
+		m.Reply("Registered")
+		replyHome(m)
+	}
 }
 
-func checkAsking(profile Profile, m *tbot.Message) {
-	log.Tracef("checkAsking: start")
-	defer log.Tracef("checkAsking: stop")
-	for _, question := range questions {
-		if question.asking {
-			if question.ValidationRule != "" {
-				match, err := regexp.MatchString(question.ValidationRule, m.Text())
-				if err != nil {
-					log.Errorf("error matching validation rule: %q", err)
-					return
-				}
-				if !match {
-					m.Reply(question.ValidationComment)
-					return
-				}
-			}
-			profile[question.Key] = m.Text()
-			question.asking = false
-			return
-		}
+func askNext(profile *models.Profile, m *tbot.Message) string {
+	question := nextQuestion(profile)
+	if question == nil {
+		return ""
 	}
+	if question.Options != nil {
+		m.ReplyKeyboard(question.Prompt, [][]string{question.Options}, tbot.OneTimeKeyboard)
+	} else {
+		m.Reply(question.Prompt)
+	}
+	return question.Key
+}
+
+func nextQuestion(profile *models.Profile) *Question {
+	switch {
+	case profile.FirstName == "":
+		return questions["first_name"]
+	case profile.LastName == "":
+		return questions["last_name"]
+	case profile.Has18 == false:
+		return questions["18+"]
+	}
+	return nil
+}
+
+func setAnswer(prof *models.Profile, question *Question, answer string) string {
+	if comment, ok := question.isValidAnswer(answer); !ok {
+		return comment
+	}
+	switch question.Key {
+	case "first_name":
+		prof.FirstName = answer
+	case "last_name":
+		prof.LastName = answer
+	case "18+":
+		prof.Has18 = (answer == "Yes")
+	}
+	return ""
 }
 
 func registered(chatID int64) bool {
 	log.Tracef("registered: start")
 	defer log.Tracef("registered: stop")
-	profile := storage.GetProfile(chatID)
-	log.Debugf("Profile: %v", profile)
-	for _, question := range questions {
-		if profile[question.Key] == "" {
-			return false
-		}
+	profile, err := store.GetProfile(chatID)
+	if err != nil {
+		log.Errorf("can't get player's profile: %q", err)
+		return false
 	}
-	return true
+	log.Debugf("Profile: %v", profile)
+	return profile.IsFull()
 }

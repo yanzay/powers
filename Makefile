@@ -10,4 +10,6 @@ push: docker
 	docker push yanzay/powers
 deploy: push
 	ssh root@yanzay.com "cd infra; docker-compose pull bot; docker-compose up -d"
-
+clean:
+	rm powers
+	rm powers.db

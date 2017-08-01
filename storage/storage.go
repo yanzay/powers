@@ -2,15 +2,17 @@ package storage
 
 import (
 	"encoding/binary"
-	"log"
+	"fmt"
 
 	"github.com/boltdb/bolt"
+	"github.com/yanzay/log"
 )
 
 // Storage is generic storage, contains all game data access
 type Storage interface {
 	ProfileStorage
 	HomeStorage
+	SurveyStorage
 }
 
 type boltStorage struct {
@@ -23,9 +25,26 @@ func New(filename string) Storage {
 	if err != nil {
 		log.Fatalf("can't open storage file %s: %q", filename, err)
 	}
-	return &boltStorage{
-		db: db,
+	storage := &boltStorage{db: db}
+	err = storage.createBuckets()
+	if err != nil {
+		log.Fatalf("bucket creation error: %q", err)
 	}
+	return storage
+}
+
+func (bs *boltStorage) createBuckets() error {
+	buckets := [][]byte{profilesBucket, homesBucket, surveysBucket}
+	for _, bucket := range buckets {
+		err := bs.db.Update(func(tx *bolt.Tx) error {
+			_, err := tx.CreateBucketIfNotExists(bucket)
+			return err
+		})
+		if err != nil {
+			return fmt.Errorf("can't create bucket %s: %q", string(bucket), err)
+		}
+	}
+	return nil
 }
 
 func (bs *boltStorage) set(bucket []byte, id int64, data []byte) error {

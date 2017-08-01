@@ -19,6 +19,9 @@ func (bs *boltStorage) GetProfile(id int64) (*models.Profile, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(profBytes) == 0 {
+		return &models.Profile{}, nil
+	}
 	prof := &models.Profile{}
 	err = json.Unmarshal(profBytes, prof)
 	return prof, err
