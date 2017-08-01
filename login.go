@@ -1,11 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/yanzay/log"
 	"github.com/yanzay/powers/models"
 	"github.com/yanzay/tbot"
+)
+
+const (
+	yesButton = "Yes"
+	noButton  = "No"
 )
 
 // Question is a generic question structure for surveys
@@ -44,10 +50,11 @@ var questions = map[string]*Question{
 		ValidationComment: "Last name should start with capital letter and contain only letters",
 	},
 	"18+": {
-		Key:            "18+",
-		Prompt:         "Are you 18+ years old?",
-		ValidationRule: "Yes|No",
-		Options:        []string{"Yes", "No"},
+		Key:               "18+",
+		Prompt:            "Are you 18+ years old?",
+		ValidationRule:    fmt.Sprintf("%s|%s", yesButton, noButton),
+		ValidationComment: "Just Yes or No",
+		Options:           []string{yesButton, noButton},
 	},
 }
 
@@ -146,8 +153,8 @@ func setAnswer(prof *models.Profile, question *Question, answer string) string {
 	case "last_name":
 		prof.LastName = answer
 	case "18+":
-		prof.Blocked = (answer == "No")
-		prof.Has18 = (answer == "Yes")
+		prof.Blocked = (answer == noButton)
+		prof.Has18 = (answer == yesButton)
 	}
 	return ""
 }
