@@ -52,9 +52,6 @@ var questions = map[string]*Question{
 
 func login(f tbot.HandlerFunction) tbot.HandlerFunction {
 	return func(m *tbot.Message) {
-		log.Tracef("middleware: start")
-		defer log.Tracef("middleware: stop")
-		log.Debugf("ChatID: %d", m.ChatID)
 		if registered(m.ChatID) {
 			f(m)
 			return
@@ -64,8 +61,6 @@ func login(f tbot.HandlerFunction) tbot.HandlerFunction {
 }
 
 func survey(m *tbot.Message) {
-	log.Tracef("survey: start")
-	defer log.Tracef("survey: stop")
 	profile, err := store.GetProfile(m.ChatID)
 	if err != nil {
 		log.Errorf("can't get player's profile: %q", err)
@@ -88,7 +83,6 @@ func survey(m *tbot.Message) {
 	}
 	if !registered(m.ChatID) {
 		survey.Asking = askNext(profile, m)
-		log.Tracef("saving survey %v", survey)
 		err = store.SetSurvey("login", m.ChatID, survey)
 		if err != nil {
 			log.Errorf("can't save survey %s: %q", "login", err)
@@ -143,13 +137,10 @@ func setAnswer(prof *models.Profile, question *Question, answer string) string {
 }
 
 func registered(chatID int64) bool {
-	log.Tracef("registered: start")
-	defer log.Tracef("registered: stop")
 	profile, err := store.GetProfile(chatID)
 	if err != nil {
 		log.Errorf("can't get player's profile: %q", err)
 		return false
 	}
-	log.Debugf("Profile: %v", profile)
 	return profile.IsFull()
 }
